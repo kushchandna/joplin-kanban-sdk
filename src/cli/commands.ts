@@ -10,7 +10,24 @@ import {
   convert_to_external, convert_to_inline,
   sync,
 } from '../joplin/index.js';
-import type { JoplinConfig } from '../joplin/types.js';
+import type { JoplinConfig, JoplinBoard } from '../joplin/types.js';
+
+function annotateBoard(jboard: JoplinBoard) {
+  return {
+    ...jboard,
+    board: {
+      ...jboard.board,
+      columns: jboard.board.columns.map((col, ci) => ({
+        ...col,
+        id: `col${ci}`,
+        cards: col.cards.map((card, cdi) => ({
+          ...card,
+          id: `col${ci}:card${cdi}`,
+        })),
+      })),
+    },
+  };
+}
 
 function getConfig(): Pick<JoplinConfig, 'baseUrl' | 'token'> {
   const token = process.env['JOPLIN_API_TOKEN'];
@@ -66,7 +83,7 @@ const commands: Record<string, CommandHandler> = {
     if (!id) throw new Error('--id is required');
     const client = getClient();
     const jboard = await fetch_board(client, id);
-    return { data: jboard };
+    return { data: annotateBoard(jboard) };
   },
 
   async 'save-board'(args) {
@@ -77,7 +94,7 @@ const commands: Record<string, CommandHandler> = {
     const client = getClient();
     const jboard = await fetch_board(client, id, { syncBeforeRead: false });
     const result = await save_board(client, jboard, board);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'list-boards'() {
@@ -94,7 +111,7 @@ const commands: Record<string, CommandHandler> = {
     const columns = columnsStr ? columnsStr.split(',').map(s => s.trim()) : undefined;
     const client = getClient();
     const result = await create_board(client, notebook, title, columns);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'add-column'(args) {
@@ -107,7 +124,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = add_column(jboard.board, title, position);
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'remove-column'(args) {
@@ -118,7 +135,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = remove_column(jboard.board, column);
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'rename-column'(args) {
@@ -130,7 +147,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = rename_column(jboard.board, column, title);
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'move-column'(args) {
@@ -142,7 +159,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = move_column(jboard.board, column, parseInt(posStr, 10));
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'add-card'(args) {
@@ -157,7 +174,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = add_card(jboard.board, column, title, body, position);
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'remove-card'(args) {
@@ -168,7 +185,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = remove_card(jboard.board, card);
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'move-card'(args) {
@@ -182,7 +199,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = move_card(jboard.board, card, toColumn, position);
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'move-cards'(args) {
@@ -197,7 +214,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = move_cards(jboard.board, cardIds, toColumn, position);
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'rename-card'(args) {
@@ -209,7 +226,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = rename_card(jboard.board, card, title);
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'update-card-body'(args) {
@@ -221,7 +238,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = update_card_body(jboard.board, card, body);
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'find-cards'(args) {
@@ -270,7 +287,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const newBoard = update_board_settings(jboard.board, updates);
     const result = await save_board(client, jboard, newBoard);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'convert-to-external'(args) {
@@ -282,7 +299,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const result = await convert_to_external(client, jboard, card, notebook);
     await save_board(client, { ...jboard, board: result.board }, result.board);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async 'convert-to-inline'(args) {
@@ -294,7 +311,7 @@ const commands: Record<string, CommandHandler> = {
     const jboard = await fetch_board(client, boardId);
     const result = await convert_to_inline(client, jboard, card, deleteNote);
     await save_board(client, { ...jboard, board: result.board }, result.board);
-    return { data: result };
+    return { data: annotateBoard(result) };
   },
 
   async sync() {
