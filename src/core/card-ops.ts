@@ -128,3 +128,45 @@ export function list_cards(board: Board, columnId: ColumnId): readonly Card[] {
   const colIdx = resolveColumnIndex(board, columnId);
   return board.columns[colIdx].cards;
 }
+
+export function move_cards(board: Board, cardIds: CardId[], toColumnId: ColumnId, position?: number): Board {
+  if (cardIds.length === 0) return board;
+
+  // Validate no duplicates
+  const seen = new Set<CardId>();
+  for (const id of cardIds) {
+    if (seen.has(id)) throw new CardNotFoundError(`Duplicate card ID: ${id}`);
+    seen.add(id);
+  }
+
+  // Resolve all card IDs against the original board (fail fast on any invalid)
+  const resolved = cardIds.map(id => ({ id, ...resolveCardId(board, id) }));
+
+  const toColIdx = resolveColumnIndex(board, toColumnId);
+
+  // Build a set of (colIdx, cardIdx) pairs to remove
+  const toRemove = new Set(resolved.map(r => `${r.colIdx}:${r.cardIdx}`));
+
+  // Build new columns with source cards removed
+  const columnsAfterRemoval = board.columns.map((col, ci) => {
+    const cards = col.cards.filter((_, cdi) => !toRemove.has(`${ci}:${cdi}`));
+    return { ...col, cards };
+  });
+
+  // Collect the actual card objects in the requested order
+  const cardsToInsert = resolved.map(r => board.columns[r.colIdx].cards[r.cardIdx]);
+
+  // Insert into destination
+  const destCards = [...columnsAfterRemoval[toColIdx].cards];
+  const pos = position ?? destCards.length;
+  if (pos < 0 || pos > destCards.length) {
+    throw new InvalidPositionError(pos, destCards.length);
+  }
+  destCards.splice(pos, 0, ...cardsToInsert);
+
+  const columns = columnsAfterRemoval.map((col, i) =>
+    i === toColIdx ? { ...col, cards: destCards } : col
+  );
+
+  return { ...board, columns };
+}

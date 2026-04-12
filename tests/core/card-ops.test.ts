@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { parse_board } from '../../src/core/board-ops.js';
-import { add_card, remove_card, move_card, rename_card, update_card_body, reorder_card, get_card, find_cards, list_cards } from '../../src/core/card-ops.js';
+import { add_card, remove_card, move_card, move_cards, rename_card, update_card_body, reorder_card, get_card, find_cards, list_cards } from '../../src/core/card-ops.js';
 import { CardNotFoundError, InvalidPositionError, InvalidContentError } from '../../src/core/errors.js';
 
 const FIXTURES = join(import.meta.dirname, '..', 'fixtures');
@@ -88,6 +88,64 @@ describe('card operations', () => {
       const board = move_card(exampleBoard, 'col0:card0', 'col0', 1);
       expect(board.columns[0].cards[0].title).toBe('Post 2');
       expect(board.columns[0].cards[1].title).toBe('Post 1');
+    });
+  });
+
+  describe('move_cards', () => {
+    it('moves multiple cards from one column to another', () => {
+      const board = move_cards(exampleBoard, ['col0:card0', 'col0:card1'], 'col3');
+      expect(board.columns[0].cards).toHaveLength(0);
+      expect(board.columns[3].cards).toHaveLength(2);
+      expect(board.columns[3].cards[0].title).toBe('Post 1');
+      expect(board.columns[3].cards[1].title).toBe('Post 2');
+    });
+
+    it('moves cards from multiple source columns to one destination', () => {
+      const board = move_cards(exampleBoard, ['col0:card0', 'col1:card0'], 'col3');
+      expect(board.columns[0].cards).toHaveLength(1);
+      expect(board.columns[1].cards).toHaveLength(0);
+      expect(board.columns[3].cards).toHaveLength(2);
+      expect(board.columns[3].cards[0].title).toBe('Post 1');
+      expect(board.columns[3].cards[1].title).toBe('Post 3');
+    });
+
+    it('inserts cards at a specific position', () => {
+      // col1 has Post 3, col2 has Post 4; move col0 cards to col1 at position 0
+      const board = move_cards(exampleBoard, ['col0:card0', 'col0:card1'], 'col1', 0);
+      expect(board.columns[1].cards[0].title).toBe('Post 1');
+      expect(board.columns[1].cards[1].title).toBe('Post 2');
+      expect(board.columns[1].cards[2].title).toBe('Post 3');
+    });
+
+    it('reorders a subset of cards within the same column', () => {
+      // Move col0:card1 (Post 2) to col0 at position 0, effectively putting it before Post 1
+      const board = move_cards(exampleBoard, ['col0:card1'], 'col0', 0);
+      expect(board.columns[0].cards[0].title).toBe('Post 2');
+      expect(board.columns[0].cards[1].title).toBe('Post 1');
+    });
+
+    it('returns the same board when given an empty array', () => {
+      const board = move_cards(exampleBoard, [], 'col3');
+      expect(board).toBe(exampleBoard);
+    });
+
+    it('throws on duplicate card IDs', () => {
+      expect(() => move_cards(exampleBoard, ['col0:card0', 'col0:card0'], 'col3')).toThrow(CardNotFoundError);
+    });
+
+    it('throws on invalid card ID', () => {
+      expect(() => move_cards(exampleBoard, ['col0:card99'], 'col3')).toThrow(CardNotFoundError);
+      expect(() => move_cards(exampleBoard, ['bad'], 'col3')).toThrow(CardNotFoundError);
+    });
+
+    it('throws on invalid position', () => {
+      expect(() => move_cards(exampleBoard, ['col0:card0'], 'col3', 99)).toThrow(InvalidPositionError);
+    });
+
+    it('does not mutate the original board', () => {
+      const origLen = exampleBoard.columns[0].cards.length;
+      move_cards(exampleBoard, ['col0:card0', 'col0:card1'], 'col3');
+      expect(exampleBoard.columns[0].cards).toHaveLength(origLen);
     });
   });
 

@@ -1,7 +1,7 @@
 import {
   parse_board, serialize_board, is_kanban_board,
   add_column, remove_column, rename_column, move_column, list_columns,
-  add_card, remove_card, move_card, rename_card, update_card_body, find_cards, list_cards,
+  add_card, remove_card, move_card, move_cards, rename_card, update_card_body, find_cards, list_cards,
   get_board_settings, update_board_settings,
 } from '../core/index.js';
 import {
@@ -181,6 +181,21 @@ const commands: Record<string, CommandHandler> = {
     const client = getClient();
     const jboard = await fetch_board(client, boardId);
     const newBoard = move_card(jboard.board, card, toColumn, position);
+    const result = await save_board(client, jboard, newBoard);
+    return { data: result };
+  },
+
+  async 'move-cards'(args) {
+    const boardId = getFlag(args, '--board');
+    const cardsStr = getFlag(args, '--cards');
+    const toColumn = getFlag(args, '--to-column');
+    if (!boardId || !cardsStr || !toColumn) throw new Error('--board, --cards, and --to-column are required');
+    const cardIds = cardsStr.split(',').map(s => s.trim()).filter(Boolean);
+    const posStr = getFlag(args, '--position');
+    const position = posStr !== undefined ? parseInt(posStr, 10) : undefined;
+    const client = getClient();
+    const jboard = await fetch_board(client, boardId);
+    const newBoard = move_cards(jboard.board, cardIds, toColumn, position);
     const result = await save_board(client, jboard, newBoard);
     return { data: result };
   },
