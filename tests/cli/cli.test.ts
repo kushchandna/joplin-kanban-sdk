@@ -68,11 +68,59 @@ describe('CLI', () => {
   });
 
   describe('help', () => {
-    it('shows help with --help flag', async () => {
+    it('shows command list with --help flag', async () => {
       const result = await run('--help');
       expect(result.stdout).toContain('Commands:');
       expect(result.stdout).toContain('parse');
       expect(result.stdout).toContain('add-card');
+      expect(result.stdout).toContain('help-all');
+    });
+
+    it('shows command list with -h flag', async () => {
+      const result = await run('-h');
+      expect(result.stdout).toContain('Commands:');
+      expect(result.stdout).toContain('parse');
+    });
+
+    it('shows per-command help with --help flag', async () => {
+      const result = await run('add-card', ['--help']);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('add-card');
+      expect(result.stdout).toContain('--board');
+      expect(result.stdout).toContain('--column');
+      expect(result.stdout).toContain('--title');
+    });
+
+    it('shows per-command help with -h flag', async () => {
+      const result = await run('move-cards', ['-h']);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('move-cards');
+      expect(result.stdout).toContain('--cards');
+      expect(result.stdout).toContain('--to-column');
+    });
+
+    it('shows all commands help via help-all', async () => {
+      const result = await run('help-all');
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('BOARD');
+      expect(result.stdout).toContain('COLUMNS');
+      expect(result.stdout).toContain('CARDS');
+      expect(result.stdout).toContain('fetch-board');
+      expect(result.stdout).toContain('move-cards');
+    });
+
+    it('shows all commands help via help subcommand', async () => {
+      const result = await run('help');
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('BOARD');
+      expect(result.stdout).toContain('fetch-board');
+    });
+
+    it('shows specific command help via help <command>', async () => {
+      const result = await run('help', ['fetch-board']);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('fetch-board');
+      expect(result.stdout).toContain('--id');
     });
   });
 });
