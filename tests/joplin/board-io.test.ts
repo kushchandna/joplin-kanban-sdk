@@ -1,13 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { fetch_board, save_board, list_boards, create_board } from '../../src/joplin/board-io.js';
 import { ConcurrentModificationError } from '../../src/joplin/errors.js';
 import { serialize_board } from '../../src/core/board-ops.js';
 import type { Board } from '../../src/core/types.js';
 import type { JoplinBoard } from '../../src/joplin/types.js';
-
-vi.mock('../../src/joplin/sync.js', () => ({
-  sync: vi.fn().mockResolvedValue(undefined),
-}));
 
 const BOARD_MD = '# Todo\n\n## Task 1\n\n```kanban-settings\n# Do not remove this block\n```\n';
 
@@ -40,7 +36,7 @@ describe('board-io', () => {
   describe('fetch_board', () => {
     it('fetches and parses a board', async () => {
       const client = mockClient();
-      const jboard = await fetch_board(client, 'note1', { syncBeforeRead: false });
+      const jboard = await fetch_board(client, 'note1');
       expect(jboard.noteId).toBe('note1');
       expect(jboard.noteTitle).toBe('My Board');
       expect(jboard.board.columns).toHaveLength(1);
@@ -65,7 +61,7 @@ describe('board-io', () => {
         columns: [...jboard.board.columns, { title: 'Done', cards: [], stackSettings: null }],
       };
 
-      const result = await save_board(client, jboard, newBoard, { syncAfterWrite: false });
+      const result = await save_board(client, jboard, newBoard);
       expect(client.updateNote).toHaveBeenCalledWith('note1', { body: serialize_board(newBoard) });
       expect(result.board).toBe(newBoard);
     });
@@ -89,7 +85,7 @@ describe('board-io', () => {
         updatedTime: 1000,
       };
 
-      await expect(save_board(client, jboard, jboard.board, { syncAfterWrite: false }))
+      await expect(save_board(client, jboard, jboard.board))
         .rejects.toThrow(ConcurrentModificationError);
     });
   });

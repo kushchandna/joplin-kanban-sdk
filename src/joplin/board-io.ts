@@ -1,15 +1,10 @@
 import type { Board } from '../core/types.js';
 import { parse_board, serialize_board, is_kanban_board } from '../core/board-ops.js';
-import type { JoplinBoard, JoplinConfig, BoardInfo } from './types.js';
+import type { JoplinBoard, BoardInfo } from './types.js';
 import { JoplinClient } from './joplin-client.js';
 import { ConcurrentModificationError } from './errors.js';
-import { sync } from './sync.js';
 
-export async function fetch_board(client: JoplinClient, noteId: string, config?: Pick<JoplinConfig, 'syncBeforeRead'>): Promise<JoplinBoard> {
-  if (config?.syncBeforeRead !== false) {
-    await sync();
-  }
-
+export async function fetch_board(client: JoplinClient, noteId: string): Promise<JoplinBoard> {
   const note = await client.getNote(noteId, ['id', 'title', 'body', 'parent_id', 'updated_time']);
 
   const { board } = parse_board(note.body);
@@ -27,7 +22,6 @@ export async function save_board(
   client: JoplinClient,
   jboard: JoplinBoard,
   newBoard: Board,
-  config?: Pick<JoplinConfig, 'syncAfterWrite'>,
 ): Promise<JoplinBoard> {
   const markdown = serialize_board(newBoard);
 
@@ -37,10 +31,6 @@ export async function save_board(
   }
 
   await client.updateNote(jboard.noteId, { body: markdown });
-
-  if (config?.syncAfterWrite !== false) {
-    await sync();
-  }
 
   const updated = await client.getNote(jboard.noteId, ['updated_time']);
 

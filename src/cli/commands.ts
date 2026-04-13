@@ -39,7 +39,7 @@ const commandMeta: Record<string, CommandMeta> = {
     options: [],
   },
   'fetch-board': {
-    description: 'Fetch a kanban board from Joplin by note ID. Runs sync before reading.',
+    description: 'Fetch a kanban board from Joplin by note ID.',
     usage: 'jkan fetch-board --id <noteId>',
     options: [
       { flag: '--id <noteId>', description: 'Note ID of the kanban board (required)' },
@@ -382,7 +382,7 @@ const commands: Record<string, CommandHandler> = {
     const json = await readStdin();
     const board = JSON.parse(json);
     const client = getClient();
-    const jboard = await fetch_board(client, id, { syncBeforeRead: false });
+    const jboard = await fetch_board(client, id);
     const result = await save_board(client, jboard, board);
     return { data: annotateBoard(result) };
   },
